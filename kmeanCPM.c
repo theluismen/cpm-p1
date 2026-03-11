@@ -42,8 +42,8 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[])
 
         for (i = 0; i < fN; i++)
         {
-            fS[fD[i]] += fV[i];
-            fA[fD[i]]++;
+            fS[fD[i]] = fS[fD[i]] + fV[i];
+            fA[fD[i]] = fA[fD[i]] + 1;
         }
 
         dif = 0;
@@ -55,7 +55,7 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[])
             if (fA[i])
                 fR[i] = fS[i] / fA[i];
 
-            dif += abs(t - fR[i]);
+            dif = dif + abs(t - fR[i]);
         }
 
         iter++;
