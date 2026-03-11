@@ -11,7 +11,7 @@ int A[G];
 void kmean(int fN, int fK, long fV[], long fR[], int fA[])
 {
     int i, j, min, iter = 0;
-    long dif, t;
+    long dif, t, dif2;
     long fS[G];
     int fD[N];
 
