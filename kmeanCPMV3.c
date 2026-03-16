@@ -11,7 +11,7 @@ int A[G];
 void kmean(int fN, int fK, long fV[], long fR[], int fA[])
 {
     int i, j, min, iter = 0;
-    long dif, t, dif2;
+    long dif, t, min_dif, curr_dif;
     long fS[G];
     int fD[N];
 
@@ -27,15 +27,15 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[])
         for (i = 0; i < fN; i++)
         {
             min = 0;
-            dif = abs(fV[i] - fR[0]);
+            min_dif = abs(fV[i] - fR[0]);
 
             for (j = 1; j < fK; j++)
             {
-                long curr_dif = abs(fV[i] - fR[j]);
-                if (curr_dif < dif)
+                curr_dif = abs(fV[i] - fR[j]);
+                if (curr_dif < min_dif)
                 {
                     min = j;
-                    dif = curr_dif;
+                    min_dif = curr_dif;
                 }
             }
 
