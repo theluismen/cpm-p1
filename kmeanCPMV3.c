@@ -13,7 +13,6 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[])
     int i, j, min, iter = 0;
     long dif, t, min_dif, curr_dif;
     long fS[G];
-    int fD[N];
 
     do
     {
@@ -23,30 +22,24 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[])
             fA[i] = 0;
         }
 
-        #pragma omp parallel for private(j) 
+        #pragma omp parallel for private(j, min, min_dif, curr_dif) reduction(+:fS[:fK], fA[:fK])
         for (i = 0; i < fN; i++)
         {
             min = 0;
-            min_dif = abs(fV[i] - fR[0]);
+            min_dif = labs(fV[i] - fR[0]);
 
             for (j = 1; j < fK; j++)
             {
-                curr_dif = abs(fV[i] - fR[j]);
+                curr_dif = labs(fV[i] - fR[j]);
                 if (curr_dif < min_dif)
                 {
                     min = j;
                     min_dif = curr_dif;
                 }
             }
-
-            fD[i] = min;
-        }
-
-        #pragma omp parallel for reduction(+:fS[0:fK], fA[0:fK])
-        for (i = 0; i < fN; i++)
-        {
-            fS[fD[i]] = fS[fD[i]] + fV[i];
-            fA[fD[i]] = fA[fD[i]] + 1;
+            
+            fS[min] += fV[i];
+            fA[min] += 1;
         }
 
         dif = 0;
@@ -60,7 +53,7 @@ void kmean(int fN, int fK, long fV[], long fR[], int fA[])
             {
                 fR[i] = fS[i] / fA[i];
             }
-            dif = dif + abs(t - fR[i]);
+            dif += labs(t - fR[i]);
         }
 
         iter++;

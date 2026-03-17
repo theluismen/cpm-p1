@@ -3,7 +3,18 @@
 #include <omp.h>
 
 #define N 600000
-#define G 200  
+#define G 200
+
+long V[N];
+long R[G];
+int A[G];
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <omp.h>
+
+#define N 600000
+#define G 200
 
 long V[N];
 long R[G];
@@ -11,46 +22,61 @@ int A[G];
 
 void kmean(int fN, int fK, long fV[], long fR[], int fA[])
 {
-    int i, j, iter = 0;
-    long dif, t;
+    int i, j, min, iter = 0;
+    long dif, t, min_dif, curr_dif;
     long fS[G];
-    int fD[N]; 
 
-    do {
-        for(i = 0; i < fK; i++) {
+    do
+    {
+        for (i = 0; i < fK; i++)
+        {
             fS[i] = 0;
             fA[i] = 0;
         }
 
-        #pragma omp parallel for schedule(static) private(j) reduction(+:fS[0:fK], fA[0:fK])
-        for (i = 0; i < fN; i++) {
-            int min = 0;
-            long dif_local = labs(fV[i] - fR[0]); 
-            for (j = 1; j < fK; j++) {
-                long curr_dif = labs(fV[i] - fR[j]);
-                if (curr_dif < dif_local) {
+        #pragma omp parallel for private(j, min, min_dif, curr_dif) reduction(+:fS[:fK], fA[:fK])
+        for (i = 0; i < fN; i++)
+        {
+            min = 0;
+            min_dif = labs(fV[i] - fR[0]);
+
+            for (j = 1; j < fK; j++)
+            {
+                curr_dif = labs(fV[i] - fR[j]);
+                if (curr_dif < min_dif)
+                {
                     min = j;
-                    dif_local = curr_dif;
+                    min_dif = curr_dif;
                 }
             }
-            fD[i] = min;
             fS[min] += fV[i];
-            fA[min]++;
+            fA[min] += 1;
         }
 
         dif = 0;
+
         #pragma omp parallel for reduction(+:dif) private(t)
-        for(i = 0; i < fK; i++) {
+        for (i = 0; i < fK; i++)
+        {
             t = fR[i];
-            if (fA[i]) fR[i] = fS[i] / fA[i];
+
+            if (fA[i])
+            {
+                fR[i] = fS[i] / fA[i];
+            }
             dif += labs(t - fR[i]);
         }
-        
+
         iter++;
-    } while(dif);
+
+    } while (dif);
 
     printf("iter %d\n", iter);
 }
+
+// ... qs() y main() se mantienen igual ...
+
+// ... Resto del código (qs y main) se mantiene igual ...
 
 // ... La funció qs() (QuickSort) i main() es mantenen exactament igual ...
 void qs(int ii, int fi, long fV[], int fA[]) {
