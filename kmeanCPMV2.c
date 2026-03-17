@@ -11,51 +11,71 @@ int A[G];
 
 void kmean(int fN, int fK, long fV[], long fR[], int fA[])
 {
-    int i, j, iter = 0;
-    long dif, t;
-    long fS[G];
-    int fD[N];
+    int iter = 0;
+    long dif;
+    static int fD[N]; // Estático para no sobrecargar la pila
 
     do {
-        // 1. Inicialització (Seqüencial, molt ràpid ja que G és només 200)
-        for(i = 0; i < fK; i++) {
-            fS[i] = 0;
-            fA[i] = 0;
-        }
+        long fS_global[G] = {0};
+        int fA_global[G] = {0};
+        dif = 0;
 
-        // 2. Càlcul de distàncies (Nucli pesat: O(N * K))
-        #pragma omp parallel for private(j) 
-        for (i = 0; i < fN; i++) {
-            int min = 0;
-            long min_dif = abs(fV[i] - fR[0]);
-            for (j = 1; j < fK; j++) {
-                long curr_dif = abs(fV[i] - fR[j]);
-                if (curr_dif < min_dif) {
-                    min = j;
-                    min_dif = curr_dif;
+        #pragma omp parallel
+        {
+            // Arrays locales inicializados a cero [cite: 194, 218]
+            long l_S[G];
+            int l_A[G];
+            for(int i = 0; i < fK; i++) { l_S[i] = 0; l_A[i] = 0; }
+
+            #pragma omp for schedule(static)
+            for (int i = 0; i < fN; i++) {
+                const long val = fV[i]; // Registro local [cite: 179]
+                int best_j = 0;
+                
+                // Calculamos el primero fuera para inicializar min_d
+                long min_d = val - fR[0];
+                if (min_d < 0) min_d = -min_d;
+
+                // Bucle optimizado para vectorización
+                for (int j = 1; j < fK; j++) {
+                    long cur_d = val - fR[j];
+                    if (cur_d < 0) cur_d = -cur_d;
+                    
+                    if (cur_d < min_d) {
+                        min_d = cur_d;
+                        best_j = j;
+                    }
+                }
+                
+                fD[i] = best_j;
+                l_S[best_j] += val;
+                l_A[best_j]++;
+            }
+
+            // Consolidación final por hilo [cite: 147]
+            #pragma omp critical
+            {
+                for (int j = 0; j < fK; j++) {
+                    fS_global[j] += l_S[j];
+                    fA_global[j] += l_A[j];
                 }
             }
-            fD[i] = min;
-        }
+        } // Fin de parallel [cite: 42, 43]
 
-        // 3. Acumulació (Ús de reducció d'arrays suportada en OpenMP >= 4.5)
-        #pragma omp parallel for reduction(+:fS[0:fK], fA[0:fK])
-        for(i = 0; i < fN; i++) {
-            fS[fD[i]] += fV[i];
-            fA[fD[i]]++;
+        // Actualización de centroides y cálculo de dif
+        for(int j = 0; j < fK; j++) {
+            if (fA_global[j] > 0) {
+                long antiguo = fR[j];
+                fR[j] = fS_global[j] / fA_global[j];
+                fA[j] = fA_global[j]; // Guardamos el conteo final
+                
+                long d = antiguo - fR[j];
+                if (d < 0) d = -d;
+                dif += d;
+            }
         }
-
-        dif = 0;
-        // 4. Actualització de centroides
-        #pragma omp parallel for reduction(+:dif) private(t)
-        for(i = 0; i < fK; i++) {
-            t = fR[i];
-            if (fA[i]) fR[i] = fS[i] / fA[i];
-            dif += abs(t - fR[i]);
-        }
-        
         iter++;
-    } while(dif);
+    } while(dif > 0);
 
     printf("iter %d\n", iter);
 }
